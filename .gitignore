@@ -1,6 +1,5 @@
 #configuration
 client/src/components/icons/laragon-wamp.exe
-db.js
 # dependencies
 /node_modules
 /.pnp
@@ -26,7 +25,5 @@ yarn-error.log*
 
 
 #configuration
-/server/db.js
-db.js
 
 443ed2bae9bb4e5aaa2971fd38c4feb327fcd683
