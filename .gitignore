@@ -1,0 +1,32 @@
+#configuration
+client/src/components/icons/laragon-wamp.exe
+db.js
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/build
+
+# misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+#configuration
+/server/db.js
+db.js
+
+443ed2bae9bb4e5aaa2971fd38c4feb327fcd683
