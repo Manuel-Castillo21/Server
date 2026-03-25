@@ -4,7 +4,12 @@ const db = require("../db");
 const fs = require("fs");
 const path = require("path");
 const PDFDocument = require("pdfkit");
-const nodemailer = require("nodemailer");
+let Resend;
+try {
+  Resend = require("resend").Resend;
+} catch (err) {
+  console.warn('Advertencia: módulo resend no encontrado. El envío de emails funcionará en modo fallback.');
+}
 const { authenticateToken } = require("./admin");
 
 router.put("/verificar/:id", async (req, res) => {
@@ -191,84 +196,81 @@ router.put("/verificar/:id", async (req, res) => {
       [orden.id, subtotal, iva, total, fecha_emision, archivoFactura, hora_servicio]
     );
 
-    // Preparar y configurar el transporter
-    const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true' || false, // Agregado para consistencia
-  auth: {
-    user: process.env.SMTP_USER, // SIN FALLBACK
-    pass: process.env.SMTP_PASS, // SIN FALLBACK
-  },
-  tls: {
-    rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== "false",
-  },
-});
+    if (!Resend || !process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'tu-api-key-de-resend-aqui') {
+      console.warn('Advertencia: Resend no está disponible o no está configurado. Se guarda la factura sin enviar email.');
+      return res.json({
+        message: "Factura verificada correctamente (sin envío de email)",
+        detalles: {
+          ordenId: orden.id,
+          servicios: servicios.length,
+          total: total,
+          emailEnviado: false,
+          nota: "Instala el paquete 'resend' y configura RESEND_API_KEY para habilitar email"
+        }
+      });
+    }
 
-// Verificar que las credenciales existen (opcional pero recomendado)
-if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-  console.error('❌ ERROR CRÍTICO: Credenciales SMTP no configuradas');
-  if (process.env.NODE_ENV === 'production') {
-    // En producción, esto debería ser un error fatal
-    return res.status(500).json({
-      error: "Error de configuración del servidor",
-      details: "Credenciales de email no configuradas"
-    });
-  }
-}
+    // Inicializar Resend
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Verificar conexión SMTP para mejores errores
-try {
-  await transporter.verify();
-} catch (verifyErr) {
-  console.error("SMTP transporter.verify() failed:", verifyErr);
-  return res.status(502).json({
-    error: "No se pudo conectar al servidor de correo (SMTP). Factura guardada en la base de datos.",
-    details: verifyErr.message,
-  });
-}
+    // Preparar adjunto PDF como base64 para Resend
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    const pdfBase64 = pdfBuffer.toString("base64");
 
-// Opciones de correo
-const mailOptions = {
-  from: process.env.SMTP_FROM || `"Soporte" <${process.env.SMTP_USER}>`, // Mejor fallback
-  to: orden.email_cliente,
-  subject: "Factura de tu servicio verificado",
-  html: `
-    <h2>Hola ${orden.cliente},</h2>
-    <p>Tu pago ha sido verificado exitosamente. Adjuntamos tu factura en PDF.</p>
-    <p><strong>Detalles de la orden:</strong></p>
-    <ul>
-      <li>Número de orden: ${orden.id}</li>
-      <li>Fecha: ${new Date(orden.fecha).toLocaleDateString()}</li>
-      <li>Servicios contratados: ${servicios.length}</li>
-      <li>Total: ${formatCurrency(total)}</li>
-    </ul>
-    <p>Trabajador asignado: ${orden.trabajador_nombre}</p>
-    <p>Gracias por confiar en nuestros servicios.</p>
-  `,
-  attachments: [
-    {
-      filename: archivoFactura,
-      path: pdfPath,
-    },
-  ],
-};
+    try {
+      const sendResponse = await resend.emails.send({
+        from: 'Alyte Servicios <onboarding@resend.dev>', // Cambia esto por tu dominio verificado
+        to: [orden.email_cliente],
+        subject: "Factura de tu servicio verificado",
+        html: `
+          <h2>Hola ${orden.cliente},</h2>
+          <p>Tu pago ha sido verificado exitosamente. Adjuntamos tu factura en PDF.</p>
+          <p><strong>Detalles de la orden:</strong></p>
+          <ul>
+            <li>Número de orden: ${orden.id}</li>
+            <li>Fecha: ${new Date(orden.fecha).toLocaleDateString()}</li>
+            <li>Servicios contratados: ${servicios.length}</li>
+            <li>Total: ${formatCurrency(total)}</li>
+          </ul>
+          <p>Trabajador asignado: ${orden.trabajador_nombre}</p>
+          <p>Gracias por confiar en nuestros servicios.</p>
+        `,
+        attachments: [
+          {
+            filename: archivoFactura,
+            type: "application/pdf",
+            content: pdfBase64,
+            disposition: "attachment",
+          },
+        ],
+      });
 
-// Enviar correo
-await transporter.sendMail(mailOptions);
-
-res.json({ 
-  message: "Factura verificada y enviada correctamente.",
-  detalles: {
-    ordenId: orden.id,
-    servicios: servicios.length,
-    total: total,
-    emailEnviado: orden.email_cliente
-  }
-});
+      res.json({
+        message: "Factura verificada y enviada correctamente.",
+        detalles: {
+          ordenId: orden.id,
+          servicios: servicios.length,
+          total: total,
+          emailEnviado: orden.email_cliente,
+          resendId: sendResponse?.id || null
+        }
+      });
+    } catch (sendError) {
+      console.error("Error al enviar email con Resend:", sendError);
+      res.status(200).json({
+        message: "Factura verificada. No se pudo enviar el correo electrónico.",
+        detalles: {
+          ordenId: orden.id,
+          servicios: servicios.length,
+          total: total,
+          emailEnviado: false,
+          error: sendError.message || sendError
+        }
+      });
+    }
   } catch (error) {
     console.error("Error al verificar y enviar factura:", error);
-    res.status(500).json({ error: "Error al enviar la factura", details: error.message });
+    res.status(500).json({ error: "Error al procesar la factura", details: error.message });
   }
 });
 

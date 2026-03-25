@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const db = require("../db");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const jwt = require("jsonwebtoken");
 const registrarBitacora = require("./bitacora");
 const API_URL_FRONT= process.env.FRONTEND_URL;
@@ -108,36 +108,25 @@ router.post("/forgot-password", async (req, res) => {
       [token, expires, email]
     );
  //ENVIO DE CORREO DE RECUPERACION DE CONTRASEÑA
-    const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true', // false para 587, true para 465
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Validación opcional pero recomendada
-if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-  console.error('❌ ERROR: Credenciales de email no configuradas');
-  // En producción, esto debería lanzar un error
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('SMTP credentials are not configured');
-  }
-}
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ ERROR: RESEND_API_KEY no configurada');
+      throw new Error('Resend API key is not configured');
+    }
 
-const resetLink = `${process.env.API_URL_FRONT}/reset-password/${token}`;
+    const resetLink = `${API_URL_FRONT}/reset-password/${token}`;
+    const emailResult = await resend.emails.send({
+      from: process.env.RESEND_FROM,
+      to: email,
+      subject: "Recuperar contraseña",
+      html: `
+        <p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>
+        <a href="${resetLink}">${resetLink}</a>
+      `,
+    });
 
-await transporter.sendMail({
-  from: process.env.SMTP_FROM || "Soporte <alyte8447@gmail.com>",
-  to: email,
-  subject: "Recuperar contraseña",
-  html: `
-    <p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>
-    <a href="${resetLink}">${resetLink}</a>
-  `,
-});
+    console.log('Email sent:', emailResult);
 //FIN
     await registrarBitacora({
       usuario_id: user.id,
