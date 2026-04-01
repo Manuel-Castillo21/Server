@@ -219,7 +219,7 @@ router.put("/verificar/:id", async (req, res) => {
 
     try {
       const sendResponse = await resend.emails.send({
-        from: 'Alyte Servicios <onboarding@resend.dev>', // Cambia esto por tu dominio verificado
+        from: process.env.RESEND_FROM || 'Alyte Servicios <onboarding@resend.dev>', // Cambia esto por tu dominio verificado
         to: [orden.email_cliente],
         subject: "Factura de tu servicio verificado",
         html: `
