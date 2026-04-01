@@ -4,9 +4,22 @@ const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
 
-// 1. CONFIGURACIÓN DE CORS (Ponlo siempre al principio)
+// 1. CONFIGURACIÓN DE CORS (Actualizada con tu URL de Vercel)
+const allowedOrigins = [
+  'http://localhost:3000', 
+  'https://alyte-cleanning.vercel.app' // Tu URL real
+];
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://tu-sitio.netlify.app'],
+  origin: function (origin, callback) {
+    // Permitir peticiones sin origen (como Postman o apps móviles) 
+    // o si el origen está en nuestra lista blanca
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -23,7 +36,7 @@ const facturasRoutes = require("./routes/facturas");
 const ordenesRoutes = require("./routes/ordenes"); 
 const ubicacionRoutes = require("./routes/ubicacion"); 
 const bitacoraRoutes = require("./routes/bitacora");
-const chatbotRoutes = require('./routes/chatbot'); // <--- Asegúrate de que este archivo exista en /routes
+const chatbotRoutes = require('./routes/chatbot'); 
 
 // 3. USO DE RUTAS
 app.use("/auth", authRoutes);
@@ -36,7 +49,7 @@ app.use("/facturas", facturasRoutes);
 app.use("/ordenes", ordenesRoutes);
 app.use("/ubicacion", ubicacionRoutes); 
 app.use("/bitacora", bitacoraRoutes); 
-app.use('/chatbot', chatbotRoutes); // <--- Esto habilita http://localhost:3001/chatbot
+app.use('/chatbot', chatbotRoutes); 
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, '0.0.0.0', () => {
