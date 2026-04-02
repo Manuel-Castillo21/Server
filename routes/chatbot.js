@@ -61,7 +61,7 @@ router.post('/chat', async (req, res) => {
 
         // REFUERZO ANTIASTERISCO: Definimos reglas de salida prohibidas
         const systemInstruction = `
-        Eres Alyte-Bot, asistente guia de Chiwire. Tu unico trabajo es explicar el uso de la plataforma.
+        Eres Alyte-Bot, asistente guia de la aplicacion Alyte. Tu unico trabajo es explicar el uso de la plataforma.
 
         REGLAS DE SALIDA (ESTRICTAS):
         1. PROHIBIDO EL USO DE ASTERISCOS: Nunca escribas **palabra** ni *palabra*. Tampoco uses guiones de lista (-).
