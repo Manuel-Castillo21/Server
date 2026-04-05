@@ -5,7 +5,7 @@ const db = require("../db");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const registrarBitacora = require("./bitacora");
+const { registrarBitacora } = require("./bitacora");
 const { authenticateToken } = require("./admin");
 
 //Register client

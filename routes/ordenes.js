@@ -2,7 +2,19 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("./admin");
-const registrarBitacora = require("./bitacora");
+const { registrarBitacora } = require("./bitacora");
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  }
+});
+const upload = multer({ storage });
 
 // CREAR ORDEN
 router.post("/crear", authenticateToken, async (req, res) => {
@@ -293,17 +305,22 @@ router.get("/trabajador", authenticateToken, async (req, res) => {
 });
 
 // ACTUALIZAR PAGO DE ORDEN
-router.put("/actualizarPago/:id", authenticateToken, async (req, res) => {
+router.put("/actualizarPago/:id", authenticateToken,  upload.single("captura"), async (req, res) => {
   const { id } = req.params;
   const { metodo_pago, referencias } = req.body;
+  const captura = req.file ? req.file.filename : null;
 
   try {
-    await db.query(
+    console.log("Datos recibidos:", { id, metodo_pago, referencias, captura, user: req.user });
+
+    const result = await db.query(
       `UPDATE ordenes
-       SET metodo_pago = $1, referencias = $2
-       WHERE id = $3`,
-      [metodo_pago, referencias, id]
+       SET metodo_pago = $1, referencias = $2, comprobante = $3
+       WHERE id = $4`,
+      [metodo_pago, referencias, captura, id]
     );
+
+    console.log("Resultado query:", result.rowCount);
 
     await registrarBitacora({
       usuario_id: req.user.id,
@@ -316,7 +333,8 @@ router.put("/actualizarPago/:id", authenticateToken, async (req, res) => {
 
     res.json({ message: "Pago actualizado correctamente" });
   } catch (error) {
-    res.status(500).json({ error: "Error al actualizar el pago" });
+    console.error("Error en actualizarPago:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 

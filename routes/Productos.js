@@ -5,7 +5,7 @@ const path = require("path");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("./admin");
-const registrarBitacora = require("./bitacora");
+const { registrarBitacora } = require("./bitacora");
 
 // OBTENER PRODUCTOS
 router.get("/", authenticateToken, async (req, res) => {
