@@ -5,7 +5,7 @@ const db = require("../db");
 const crypto = require("crypto");
 const { Resend } = require("resend");
 const jwt = require("jsonwebtoken");
-const registrarBitacora = require("./bitacora");
+const { registrarBitacora } = require("./bitacora");
 const API_URL_FRONT= process.env.FRONTEND_URL;
 
 router.post("/Login", async (req, res) => {

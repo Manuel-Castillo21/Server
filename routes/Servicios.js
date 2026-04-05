@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("./admin");
-const registrarBitacora = require("./bitacora");
+const { registrarBitacora } = require("./bitacora");
 
 // Obtener todos los servicios
 router.get("/", authenticateToken, async (req, res) => {

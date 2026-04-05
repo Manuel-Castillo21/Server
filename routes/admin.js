@@ -5,7 +5,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
-const registrarBitacora = require("./bitacora");
+const { registrarBitacora } = require("./bitacora");
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -105,7 +105,7 @@ router.get("/ComprobantesPendientes", authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
-        o.id, o.estado, o.fecha,
+        o.id, o.estado, o.fecha, o.comprobante,
         s.nombre AS servicio,
         c.nombre AS cliente,
         t.nombre AS trabajador,

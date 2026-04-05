@@ -35,7 +35,7 @@ const ServiciosRoutes = require("./routes/Servicios");
 const facturasRoutes = require("./routes/facturas"); 
 const ordenesRoutes = require("./routes/ordenes"); 
 const ubicacionRoutes = require("./routes/ubicacion"); 
-const bitacoraRoutes = require("./routes/bitacora");
+const {bitacoraRoutes} = require("./routes/bitacora");
 const chatbotRoutes = require('./routes/chatbot'); 
 
 // 3. USO DE RUTAS
